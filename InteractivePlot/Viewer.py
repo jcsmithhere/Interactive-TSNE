@@ -34,12 +34,12 @@ def save_errors(fun):
 
 class InteractivePlot:
     """Standard version selects random sample of objects from cluster"""
-    def __init__(self, tcl, tsne_obj, objects, spd=None, nside=4,
-                 filename=None, highlight=None, highlightpars=None):
+    def __init__(self, clusters, tsne_obj, objects, spd=None, nside=4,
+                 filename=None, highlight=None, highlightpars=None, colors=None):
         """
-        tcl is the list of clusters
+        clusters is the list of clusters of the t-SNE representation
         tsne_obj is the t-SNE coordinate mapping
-        objects is a table with information on the objects (names, filenames)
+        objects is a table with information on the images (names, filenames)
         
         Optional keyword parameters:
         spd is a square array [nobj,nobj] of distances
@@ -49,11 +49,13 @@ class InteractivePlot:
         highlight is an index list of points to mark
             Then highlightpars can be a dict with plot properties as parameters
             to pyplot.scatter
+        color : [float arrray] If not None then use this color array for the scatter plot and not the clusters
         """
-        self.tcl = tcl
+        self.clusters = clusters
+        self.colors = colors
         self.tsne_obj = tsne_obj
         self.objects = objects
-        self.clcount = np.bincount(self.tcl)
+        self.clcount = np.bincount(self.clusters)
         self.nside = nside
         self.filename = filename
         self.highlight = highlight
@@ -72,8 +74,12 @@ class InteractivePlot:
         self.fig = plt.figure(1,(15,7.5))
         # t-SNE plot goes in left half of display
         self.ptsne = self.fig.add_subplot(121)
-        cc = self.colormap()
-        self.ptsne.scatter(self.tsne_obj[:,0],self.tsne_obj[:,1],c=cc[self.tcl-1],s=5)
+        if self.colors is None:
+            cc = self.colormap()
+            sp = self.ptsne.scatter(self.tsne_obj[:,0],self.tsne_obj[:,1],c=cc[self.clusters-1],s=5)
+        else:
+            sp = self.ptsne.scatter(self.tsne_obj[:,0],self.tsne_obj[:,1],c=self.colors,s=5)
+            self.fig.colorbar(sp, ax=self.ptsne, label='cluster values')
         self.ptsne.set_title(self.title())
         if self.highlight is not None:
             self.ptsne.scatter(self.tsne_obj[self.highlight,0],self.tsne_obj[self.highlight,1],
@@ -97,7 +103,14 @@ class InteractivePlot:
         self.saved = False
         self.fig.canvas.mpl_connect('close_event', self.close)
         self.cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        
+        # Start with showing some random figures
+        self.showcluster(0.0,0.0)
+
+       #plt.ion()
         self.fig.show()
+
+        input('Hit the Any key to quit')
 
     @save_errors
     def close(self,event):
@@ -110,7 +123,11 @@ class InteractivePlot:
         """Create colors for the clusters"""
         nclusters = len(self.clcount)-1
         # create color array for the clusters by wrapping the tab20 array
-        cmap = plt.cm.tab20
+        # Or use a smaller set if fewer clusters
+        if nclusters < 10:
+            cmap = plt.cm.tab10
+        else:
+            cmap = plt.cm.tab20
         ncolors = len(cmap.colors)
         cc = np.tile(np.array(cmap.colors),((nclusters+ncolors-1)//ncolors,1))
         cc = cc[:nclusters]
@@ -129,9 +146,9 @@ class InteractivePlot:
         other members of the same cluster.
         """
         k = self.findclosest(x,y)
-        i = self.tcl[k]
+        i = self.clusters[k]
         nc = len(self.subplots)
-        ww = np.where((self.tcl==i)&(np.arange(self.tcl.shape[0])!=k))[0]
+        ww = np.where((self.clusters==i)&(np.arange(self.clusters.shape[0])!=k))[0]
         if len(ww) > nc-1:
             j = np.random.choice(ww,size=nc-1,replace=False)
         else:
@@ -144,7 +161,7 @@ class InteractivePlot:
         """Mark some objects and show images"""
         j = self.select_sample(x,y)
         self.label.set_text(f"x={x:.3f} y={y:.3f}")
-        i = self.tcl[j[0]]
+        i = self.clusters[j[0]]
         if self.prevplt is not None:
             [x.remove() for x in self.prevplt]
         for sp in self.subplots:
@@ -186,6 +203,7 @@ class InteractivePlot:
         except ValueError:
             pass
         self.showcluster(x,y)
+        self.fig.canvas.draw_idle()
 
 
 class InteractiveClosest(InteractivePlot):
@@ -195,9 +213,9 @@ class InteractiveClosest(InteractivePlot):
 
     def select_sample(self,x,y):
         k = self.findclosest(x,y)
-        i = self.tcl[k]
+        i = self.clusters[k]
         nc = len(self.subplots)
-        ww = np.where(self.tcl==i)[0]
+        ww = np.where(self.clusters==i)[0]
         ww = ww[np.argsort(self.pdist[ww,k])]
         ww = ww[:nc]
         return ww
@@ -222,10 +240,10 @@ class InteractiveFarthest(InteractivePlot):
 
     def select_sample(self,x,y):
         k = self.findclosest(x,y)
-        i = self.tcl[k]
+        i = self.clusters[k]
         nc = len(self.subplots)
         # sort cluster members from largest to smallest distance to this object
-        ww = np.where((self.tcl==i)&(np.arange(self.tcl.shape[0])!=k))[0]
+        ww = np.where((self.clusters==i)&(np.arange(self.clusters.shape[0])!=k))[0]
         ww = ww[np.argsort(-self.pdist[ww,k])]
         ww = ww[:nc-1]
         ww = np.insert(ww,0,k)
