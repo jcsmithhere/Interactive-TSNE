@@ -1,17 +1,23 @@
 # Interactive Viewer
 
-Interactive Viewer is a tool that provides a way to visually view a PyTorch model's feature representation for better embedding space interpretability.
+Interactive Viewer is a tool that provides a way to visually view a data set's features in a 2-dimnensional space. One
+can then select a data point in the representation and view nearest neighbors 
 
 # Features
 
-1. An Interactive plot to view the nearest neighbors of every data point in an embeddding space. Currently supports TSNE/UMAP. 
+1. Either visualize a general higher dimensional data set or specifically a PyTorch model.
 
-2. Visualize data in 3D using the TensorBoard Embedding Projector.
+2. An Interactive plot to view the nearest neighbors of every data point in an embeddding space. Currently supports TSNE/UMAP. 
+
+3. Visualize data in 3D using the TensorBoard Embedding Projector.
 
 # Installation
 
-``` 
-pip install git+https://github.com/spaceml-org/Interactive-TSNE.git
+This is a Fork of [Interactive t-SNE](https://github.com/spaceml-org/Interactive-TSNE). It is in active development and
+so is recommended to install in development mode. There are different ways to do this. A simple way is to use the `-e`
+option for pip. After activating your Python envirnment, in the top level directory of this repo type
+```
+pip install -e .
 ```
 
 # Interactive Plot 
@@ -21,7 +27,54 @@ pip install git+https://github.com/spaceml-org/Interactive-TSNE.git
 ![alt text](https://s4.gifyu.com/images/2021-03-24-03-33-49-2.gif "Interactive Plot")
 
 
-## Usage
+# Usage
+
+There are two main usages:
+
+### General multi-dimensional scalar feature set:
+
+With this usage, you create a set of PNG figures and a higher dimensional feature set associated with each figures. 
+You need to first place all figures associated with the data points in a single directory. Then create a
+multi-dimensional array to pass to t-SNE to create the visual 2-D representation.
+
+```
+from InteractivePlot.PrepareData import PrepareData_general
+from InteractivePlot.Viewer import InteractiveAllclose
+
+# Create the t-SNE representation and image table
+data = PrepareData_general(data=image_features, image_path=images, image_sort_key=sort_key, num_clusters=20, method = 'tsne', perplexity=30)
+
+# Generate t-SNE figure allowing one to view figures of closest points to selected point. 
+p = InteractiveAllclose(clusters, data.tsne_results, data.image_mapping, nside=3, colors=bolideBeliefArrayTrain)
+
+```
+
+`PrepareData_general` parameters:
+`images` is the path to PNG images
+
+`image_features` is the image representation data to cluster with t-SNE (or UMAP), of shape (n_datums, n_dimensions)
+
+`sort_key` is a list of strings used to sort the image files to correspond to the data in `image_features`
+Each string should correspond to a unique string segment in each PNG figure filename.
+
+`InteractiveAllclose` parameters:
+'clusters' is a list of clusters (array of ints) used to colorize the t-SNE figure. 
+'colors' is an optional parmater, if passed then use this color value array (array of floats) for the scatter plot and not the clusters
+`nside` is the number of figures to show in a nside x nside grid.
+
+See the module function headers for more details and more advanced usage.
+
+Here is an example generated figure. The `colors=` optional argument is used to colorize the t-SNE points. 
+One clicks on a point in the t-SNE. The selected point image is shown in the upper
+left corners and its nearest neihgbors are also shown.
+<img src="./example/example_tsne_figure_color_by_score.png">
+
+
+# Everything below is the same as in the original repo: 
+
+
+### PyTorch model embeddings:
+This is the same as in the original repo version: 
 
 ```
 from InteractivePlot import PrepareData
@@ -43,7 +96,8 @@ num_clusters : the number of clusters to be mapped to a color scheme. For color 
 
 output_size : the number of output dimensions of your model.
 
-**NOTE** : This currently works only on Jupyter notebook instances that support either the __widget__ or the __notebook__ matplotlib backends. Does not currently support Colab. 
+**NOTE** : This currently works only on Jupyter notebook instances that support either the __widget__ or the __notebook__ matplotlib backends. 
+Does not currently support Colab. 
 
 
 # TensorBoard Projector

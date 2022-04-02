@@ -36,7 +36,48 @@ import umap
 class PrepareData:
     '''
     Superclass for preparing data for interactive t-SNE
+
+    Class Attributes:
+    
     '''
+
+    def get_images_sorted (self, image_path, sort_key):
+        """ Generates a list of images in a directory
+
+        Sorts the image files based on <sort_key> str.
+        sort_key is a string that should exist in the name of each image file
+
+        Parameters
+        ----------
+        image_path : str
+            Path to the images in a directory
+        sort_key : np.array of str
+            A list of strings used to sort the files in the output array
+            sort_key must be the same length as the number of images in the directory
+            If None then the images will be used in whatever order they are in the directory
+
+        Returns
+        -------
+        ims : list of str
+            A list of file names
+        """
+
+        if sort_key is None:
+            ims = self.get_images(DATA_PATH)
+
+        else:
+
+            ims_raw = glob.glob(os.path.join(image_path, '*.png'), recursive=False)
+            
+            assert len(ims_raw) == len(sort_key), 'sort_key must be the same length as the number of images in the directory'
+            
+            ims = []
+            for key in sort_key:
+                idx = np.nonzero([filename.count(str(key)) for filename in ims_raw])[0]
+                assert len(idx == 1), 'Error in sorting image files'
+                ims.append(ims_raw[idx[0]])
+
+        return ims
 
     def get_images(self, DATA_PATH):
 
@@ -56,15 +97,6 @@ class PrepareData:
                 ims.append(f'{DATA_PATH}/{folder}/{im}')
         return ims
     
-    def embedding_gen(self, num_clusters, method, perplexity, n_neighbors, n_jobs):
-        '''
-        Helper function to compute the t-SNE or UMAP embeddings from the higher-dimensional data.
-        '''
-
-        tsne_results, spd, clusters = self.calculate_similarity(num_clusters, method, perplexity, n_neighbors, n_jobs)
-        objects = self.object_creation()
-        return tsne_results, spd, clusters, objects
-
     def calculate_similarity(self, num_clusters, method, perplexity, n_neighbors, n_jobs):
 
         '''
@@ -77,7 +109,7 @@ class PrepareData:
         
         Returns: 
            tsne_results (numpy.ndarray) : t-SNE coordinate mapping
-           spd (numpy.ndarray) : a square array [nobj,nobj] of distances
+           sp_dist (numpy.ndarray) : a square array [nobj,nobj] of distances
            clusters (numpy.ndarray) : list of clusters
         '''
 
@@ -88,7 +120,7 @@ class PrepareData:
 
        #pdt = pdist(self.data, metric= 'cosine')
         pdt = pdist(tsne_results)
-        spd = squareform(pdt)
+        sp_dist = squareform(pdt)
 
         # Why do you cluster the raw data and not the t-SNE embeddings?
        #z = linkage(self.data, method = 'centroid')
@@ -96,7 +128,7 @@ class PrepareData:
         clusters = fcluster(z.astype(float), num_clusters, criterion= 'maxclust')
         print("Linkage variables created.")
 
-        return tsne_results, spd, clusters
+        return tsne_results, sp_dist, clusters
     
     def fit_tsne(self, data, perplexity = 30, n_jobs = 1):
 
@@ -105,7 +137,6 @@ class PrepareData:
 
         Parameters
         ----------
-
         data : ndarray of shape (n_samples, n_features)
             Model features or SSL embeddings
         perplexity : int
@@ -115,7 +146,9 @@ class PrepareData:
             Number of parallel jobs to use
         
         Returns: 
-            (numpy.ndarray) : TSNE result embeddings
+        --------
+        tsne_results : (n_samples, n_components)
+            Embedding of the training data in low-dimensional space.
         '''
         
         n_components = 2
@@ -129,6 +162,7 @@ class PrepareData:
         tsne_results = TSNE(n_components=n_components,
                             verbose=verbose,
                             perplexity=perplexity,
+                            learning_rate='auto',
                             n_iter=n_iter,
                             n_jobs= n_jobs,
                             random_state=42,
@@ -148,26 +182,35 @@ class PrepareData:
             metric='euclidean')
         
         u = fit.fit_transform(feature_list)
+
+        # Remove infs from set
+        nanHere = np.union1d(np.nonzero(np.isnan(u[:,0]))[0],np.nonzero(np.isnan(u[:,1]))[0])
+        # For now, just replace with 0, 0
+        u[nanHere,:] = (0.0, 0.0)
+
         print('UMAP done! Time elapsed: {} seconds'.format(time.time() - time_start))
         return u
 
-    def object_creation(self, ims):
+    def image_mapping_creation(self, ims):
         '''
         Creates a DataFrame containing filename label mapping
 
-        Args: 
+        Parameters
+        ----------
             ims (list) : Order of images in a folder
 
-        Retuns: 
-            objects (pandas.DataFrame)  
+        Returns
+        -------
+            image_mapping (pandas.DataFrame)  
+               ['name', 'filename'] pairs for each image 
         '''
         df_lis = []
         for img in ims:
             df_lis.append((img.split('/')[-2], img))
 
-        objects = pd.DataFrame(df_lis, columns = ['name', 'filename'])
+        image_mapping = pd.DataFrame(df_lis, columns = ['name', 'filename'])
         print("Filename mapping done.")
-        return objects
+        return image_mapping
 
 
 #*************************************************************************************************************
@@ -176,7 +219,7 @@ class PrepareData_general(PrepareData):
     Prepares a general set of Data for passing to the Interactive TSNE.
     '''
 
-    def __init__(self, data, image_path, image_sort_key, num_clusters, method = 'tsne', perplexity= 30, n_neighbors= 5, n_jobs = 1):
+    def __init__(self, data, image_path, num_clusters, image_sort_key=None, method = 'tsne', perplexity= 30, n_neighbors= 5, n_jobs = 1):
         """ Initialize the data for general t-SNE use
 
         Parameters
@@ -186,11 +229,14 @@ class PrepareData_general(PrepareData):
         image_path  : str
             The path to the images to display on the interactive t-SNE
         image_sort_key : np.array of str
-            A list of strings used to sort the image files
+            A list of strings used to sort the image files to correspond to the data in <data>
+            Each string should correspond to a unique string segment in each figure filename.
+            If None then the images will be used in whatever order they are in the directory
         num_clusters : int
             Number of clusters to color code for visualization purposes
+            Uses a hierachical clustering method.
         method : str
-            The manifold learnign method to use
+            The manifold learning method to use
             Options: 'tsne' or 'umap'
         perplexity : int
             Used by t-SNE
@@ -206,56 +252,27 @@ class PrepareData_general(PrepareData):
         self.data = data
         self.image_path = image_path
         ims = self.get_images_sorted(image_path, image_sort_key)
-        self.objects = self.object_creation(ims)
+        self.image_mapping = self.image_mapping_creation(ims)
 
         self.tsne_results, self.spd, self.clusters = self.calculate_similarity(num_clusters, method, perplexity, n_neighbors, n_jobs)
 
-
-    def get_images_sorted (self, image_path, sort_key):
-        """ Generates a list of images in a directory
-
-        Sorts the image files based on <sort_key> str.
-        sort_key is a string that shouls exist in the name of each image file
-
-        Parameters
-        ----------
-        image_path : str
-            Path to the images in a directory
-        sort_key : np.array of str
-            A list of strings used to sort the files in the output array
-            sort_key must be the same length as the number of images in the directory
-
-        Returns
-        -------
-        ims : list of str
-            A list of file names
-        """
-
-        ims_raw = glob.glob(os.path.join(image_path, '*.png'), recursive=False)
-
-        assert len(ims_raw) == len(sort_key), 'sort_key must be the same length as the number of images in the directory'
-
-        ims = []
-        for key in sort_key:
-            idx = np.nonzero([filename.count(str(key)) for filename in ims_raw])[0]
-            assert len(idx == 1), 'Error in sorting image files'
-            ims.append(ims_raw[idx[0]])
-
-        return ims
 
 
 #*************************************************************************************************************
 class PrepareData_torch_model(PrepareData):
     '''
-    Prepares PyTorch model Data for passing to the Interactive TSNE. Specifically linkage variables used to represent relationship between clusters.
+    Prepares PyTorch model Data for passing to the Interactive TSNE. Specifically, linkage variables used to represent relationship between clusters.
     '''
 
     def __init__(self, model, DATA_PATH, output_size, num_clusters, method = 'tsne', perplexity= 30, n_jobs = 4, n_neighbors= 5):
         self.model = model
         self.data_path = DATA_PATH
         self.embeddings = self.get_matrix(MODEL_PATH = model, DATA_PATH = DATA_PATH, output_size = output_size)
-        self.ims = self.get_images(DATA_PATH)
-        self.tsne_results, self.spd, self.cl, self.objects = self.embedding_gen(self.embeddings, num_clusters, self.ims, method, perplexity, n_neighbors, n_jobs)
+        ims = self.get_images(DATA_PATH)
+        self.image_mapping = self.image_mapping_creation(ims)
+
+
+        self.tsne_results, self.spd, self.clusters = self.calculate_similarity(num_clusters, method, perplexity, n_neighbors, n_jobs)
 
     def get_matrix(self, MODEL_PATH, DATA_PATH, output_size):
 
