@@ -19,6 +19,7 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 import glob
+import re
 
 from scipy.cluster.hierarchy import fcluster
 from scipy.spatial.distance import pdist 
@@ -45,12 +46,15 @@ class PrepareData:
         """ Generates a list of images in a directory
 
         Sorts the image files based on <sort_key> str.
-        sort_key is a string that should exist in the name of each image file
+        sort_key is a string that should exist in the name of each image file.
+        The key can contain the file directory name and regular expressions.
+
+        Any sort_keys with no correposnding images will display a dummy image.
 
         Parameters
         ----------
         image_path : str
-            Path to the images in a directory
+            Path and regular expression to the images in a directory
         sort_key : np.array of str
             A list of strings used to sort the files in the output array
             sort_key must be the same length as the number of images in the directory
@@ -62,20 +66,26 @@ class PrepareData:
             A list of file names
         """
 
+        dummy_img = '/home/bohr/Pictures/download.jpeg'
+
         if sort_key is None:
             ims = self.get_images(DATA_PATH)
 
         else:
 
-            ims_raw = glob.glob(os.path.join(image_path, '*.png'), recursive=False)
+            ims_raw = glob.glob(image_path, recursive=False)
             
-            assert len(ims_raw) == len(sort_key), 'sort_key must be the same length as the number of images in the directory'
+          # assert len(ims_raw) == len(sort_key), 'sort_key must be the same length as the number of images in the directory'
             
             ims = []
             for key in sort_key:
-                idx = np.nonzero([filename.count(str(key)) for filename in ims_raw])[0]
-                assert len(idx == 1), 'Error in sorting image files'
-                ims.append(ims_raw[idx[0]])
+               #idx = np.nonzero([re.search(key, filename) for filename in ims_raw])[0]
+                idx = np.nonzero([filename.count(key) for filename in ims_raw])[0]
+                assert len(idx) <= 1, 'Error: Two or more images match a sort key'
+                if len(idx) < 1:
+                    ims.append(dummy_img)
+                else:
+                    ims.append(ims_raw[idx[0]])
 
         return ims
 

@@ -191,8 +191,8 @@ class InteractivePlot:
             pim = sp.imshow(im,cmap='gray',origin='upper')
             self.plotobjects[isp] = k
             cdist = self.pdist[k,j[0]]
-            sp.set_title("{} ({:.1f},{:.1f}) {:.3f}".format(self.image_mapping['name'][k],self.tsne_results[k,0],self.tsne_results[k,1],cdist),
-                        size=8)
+           #sp.set_title("{} ({:.1f},{:.1f}) {:.3f}".format(self.image_mapping['name'][k],self.tsne_results[k,0],self.tsne_results[k,1],cdist), size=8)
+            sp.set_title("dist={:.3f}, color={:.3f}".format(cdist, self.colors[k]), size=8)
 
     @save_errors
     def onclick(self,event):
