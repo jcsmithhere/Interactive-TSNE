@@ -3,7 +3,7 @@
 #from .prepare_data import 
 
 from InteractivePlot.PrepareData import PrepareData
-from InteractivePlot.Viewer import InteractiveAllclose 
+from InteractivePlot.Viewer import InteractivePlot 
 from InteractivePlot.TensorBoard import Projector  
 
 
