@@ -41,7 +41,7 @@ class InteractivePlot:
     """Standard version selects random sample of objects from cluster"""
     def __init__(self, clusters, tsne_results, image_mapping, tsne_dist=None, nside=4,
                  filename=None, highlight=None, highlightpars=None, colors=None,
-                 plot_thumbnails=False, thumbnail_size=128, plot_max_n_thumbnails=500, save_selection_path=None):
+                 plot_thumbnails=False, thumbnail_size=128, plot_max_n_thumbnails=None, save_selection_path=None):
         """
 
         Generates an interactive t-SNE. When you clock o a point on the t-SNE on the left-hand side fo the figure, a
@@ -79,7 +79,7 @@ class InteractivePlot:
         thumbnail_size : int
             int x int pixel size of thumbnails
         plot_max_n_thumbnails : int
-            The maximum number of thumbnails to plot
+            The maximum number of thumbnails to plot, None means no limit
         save_selection_path = str
             If not None then save copies of selected figures at the given path
         """
@@ -201,7 +201,10 @@ class InteractivePlot:
         images_to_plot = np.array([i for i,_ in enumerate(self.tsne_dist) if self.image_within_plot_view(i)])
 
         # Randomly select images to plot within plot view
-        n_images_to_plot = np.min((self.plot_max_n_thumbnails, len(images_to_plot)))
+        if self.plot_max_n_thumbnails is not None:
+            n_images_to_plot = np.min((self.plot_max_n_thumbnails, len(images_to_plot)))
+        else:
+            n_images_to_plot = len(images_to_plot)
         rng = np.random.default_rng()
         images_to_plot = images_to_plot[rng.permutation(len(images_to_plot))[0:n_images_to_plot]]
 

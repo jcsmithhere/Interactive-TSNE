@@ -284,7 +284,7 @@ class PrepareData_SSL_model(PrepareData):
         Parameters
         ----------
         model_path : 
-            Path to the PyTorch model
+            Path to the PyTorch Lightning model
         technique : 
             model technique used {SIMCLR, SIMSIAM or CLASSIFIER}
         image_path  : str
