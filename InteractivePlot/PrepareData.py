@@ -34,7 +34,7 @@ import traceback, functools
 import pandas as pd 
 import umap
 
-from self_supervised_learner.SSL import supported_techniques 
+from pds.self_supervised_learner.SSL import supported_techniques 
 
 
 class PrepareData:
