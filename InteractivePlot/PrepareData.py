@@ -34,7 +34,8 @@ import traceback, functools
 import pandas as pd 
 import umap
 
-from pds.self_supervised_learner.SSL import supported_techniques 
+from pds.self_supervised_learner.Evaluator import evaluate_model
+from pds.utilities.image_utils import get_images
 
 
 class PrepareData:
@@ -72,7 +73,7 @@ class PrepareData:
         dummy_img = '/home/bohr/Pictures/download.jpeg'
 
         if sort_key is None:
-            ims = self.get_images(image_path)
+            ims = get_images(image_path)
 
         else:
 
@@ -92,24 +93,6 @@ class PrepareData:
 
         return ims
 
-    def get_images(self, image_path):
-
-        '''
-        Get list of images in a folder.
-
-        Args:
-            image_path (str) : Path to ImageFolder Dataset
-        
-        Returns:
-            (list) : Order of images in a folder
-        '''
-
-        ims = []
-        for folder in os.listdir(image_path):
-            for im in os.listdir(f'{image_path}/{folder}'):
-                ims.append(f'{image_path}/{folder}/{im}')
-        return ims
-    
     def calculate_similarity(self, num_clusters, method, perplexity, n_neighbors, n_jobs):
 
         '''
@@ -308,8 +291,8 @@ class PrepareData_SSL_model(PrepareData):
         """
         self.model_path = model_path
         self.image_path = image_path
-        self.data = self.get_embedding_matrix(model_path = model_path, technique=technique, image_path = image_path)
-        ims = self.get_images(image_path)
+
+        self.data, ims = imageFiles = evaluate_model(model_path, technique, image_path)
         self.image_mapping = self.image_mapping_creation(ims)
 
         self.tsne_results, self.tsne_dist, self.clusters = self.calculate_similarity(num_clusters, method, perplexity, n_neighbors, n_jobs)
