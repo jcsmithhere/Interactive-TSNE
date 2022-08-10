@@ -34,7 +34,7 @@ import traceback, functools
 import pandas as pd 
 import umap
 
-from pds.self_supervised_learner.Evaluator import evaluate_model
+from pds.self_supervised_learner.Evaluator import Evaluator
 from pds.utilities.image_utils import get_images
 
 
@@ -115,11 +115,13 @@ class PrepareData:
             tsne_results = self.fit_tsne(self.data, perplexity, n_jobs)
 
        #pdt = pdist(self.data, metric= 'cosine')
+        # Compute distances between data points in t-SNE space
         pdt = pdist(tsne_results)
         tsne_dist = squareform(pdt)
 
-        # Why do you cluster the raw data and not the t-SNE embeddings?
+        # Option to cluster the raw data
        #z = linkage(self.data, method = 'centroid')
+        # Cluster the t-SNE space with hierarchical clustering
         z = linkage(tsne_results, method = 'centroid')
         clusters = fcluster(z.astype(float), num_clusters, criterion= 'maxclust')
         print("Linkage variables created.")
@@ -292,7 +294,11 @@ class PrepareData_SSL_model(PrepareData):
         self.model_path = model_path
         self.image_path = image_path
 
-        self.data, ims = imageFiles = evaluate_model(model_path, technique, image_path)
+       #self.data, ims = imageFiles = evaluate_model(model_path, technique, image_path)
+
+        evaluator = Evaluator(model_path, technique)
+        self.data, ims = evaluator.evaluate_model(image_path)
+
         self.image_mapping = self.image_mapping_creation(ims)
 
         self.tsne_results, self.tsne_dist, self.clusters = self.calculate_similarity(num_clusters, method, perplexity, n_neighbors, n_jobs)

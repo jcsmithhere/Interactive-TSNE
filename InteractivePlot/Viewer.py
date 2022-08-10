@@ -45,10 +45,12 @@ class InteractivePlot:
         """
 
         Generates an interactive t-SNE. When you clock o a point on the t-SNE on the left-hand side fo the figure, a
-        selection of images corresponding to the nearest points are displayed ont eh right-hand side oft he figure.
+        selection of images corresponding to the nearest points are displayed ont eh right-hand side of the figure.
 
-        If save_selection_path is not None then when you click on an image on the right, it is saved to the give
-        directory path.
+        If save_selection_path is not none, then when you click on an image on the right hand side, that images is
+        copied to the given directory.
+
+        If save_selection_path is None then no images are copied.
 
         Parametrs
         ---------
