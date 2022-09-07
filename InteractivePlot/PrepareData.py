@@ -263,7 +263,7 @@ class PrepareData_SSL_model(PrepareData):
     Prepares SSL model Data for passing to the Interactive TSNE. Specifically, linkage variables used to represent relationship between clusters.
     '''
 
-    def __init__(self, model_path, technique, image_path, num_clusters, method = 'tsne', perplexity= 30, n_neighbors= 5, n_jobs = 1):
+    def __init__(self, model_path, technique, image_path, num_clusters, method = 'tsne', perplexity= 30, n_neighbors= 5, n_jobs = 1, gpu_index=0):
         """ Initialize the data for a PyTorch model
 
         Parameters
@@ -287,22 +287,23 @@ class PrepareData_SSL_model(PrepareData):
             Used by UMAP
         n_jobs : int
             Number of parallel jobs to use
-        
+        gpu_index : int
+            Specify the GPU index to use for processing
+            Only useful for a multi-GPU machine
 
 
         """
         self.model_path = model_path
         self.image_path = image_path
 
-       #self.data, ims = imageFiles = evaluate_model(model_path, technique, image_path)
-
-        evaluator = Evaluator(model_path, technique)
+        evaluator = Evaluator(model_path, technique, gpu_index)
         self.data, ims = evaluator.evaluate_model(image_path)
 
         self.image_mapping = self.image_mapping_creation(ims)
 
         self.tsne_results, self.tsne_dist, self.clusters = self.calculate_similarity(num_clusters, method, perplexity, n_neighbors, n_jobs)
 
+    """
     def get_embedding_matrix(self, model_path, technique, image_path):
 
         '''      
@@ -373,7 +374,7 @@ class PrepareData_SSL_model(PrepareData):
         return embedding
 
         #***********
-        """
+        '''
         # TODO: Get the image loading process to work with torch DataLoader
         # Extract embeddings for all the images
         imageFiles = torchvision.datasets.ImageFolder(image_path, transform = t)
@@ -392,9 +393,9 @@ class PrepareData_SSL_model(PrepareData):
 
         return embedding.cpu().detach().numpy()
 
-        """
+        '''
 
-        """
+        '''
         dataset = torchvision.datasets.ImageFolder(image_path, transform = t)
         with torch.no_grad():
             if device == 'cuda':
@@ -413,7 +414,8 @@ class PrepareData_SSL_model(PrepareData):
                 embeddings = model(x)
                 data_matrix = torch.vstack((data_matrix, embeddings))
         return data_matrix.cpu().detach().numpy() 
-        """
+        '''
+    """
 
 
 
