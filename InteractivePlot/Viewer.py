@@ -128,6 +128,7 @@ class InteractivePlot:
         input('Hit the Any key to quit')
 
     def create_plot(self):
+        dot_size = 10
         plt.rcParams.update({"font.size":8})
         self.fig = plt.figure(1,(15,7.5))
 
@@ -140,9 +141,9 @@ class InteractivePlot:
             if self.colors is None:
                #cc = self.colormap()
                #sp = self.ptsne.scatter(self.tsne_results[:,0],self.tsne_results[:,1],c=cc[self.clusters-1],s=5)
-                sp = self.ptsne.scatter(self.tsne_results[:,0],self.tsne_results[:,1],c=self.clusters,s=5)
+                sp = self.ptsne.scatter(self.tsne_results[:,0],self.tsne_results[:,1],c=self.clusters,s=dot_size)
             else:
-                sp = self.ptsne.scatter(self.tsne_results[:,0],self.tsne_results[:,1],c=self.colors,s=5)
+                sp = self.ptsne.scatter(self.tsne_results[:,0],self.tsne_results[:,1],c=self.colors,s=dot_size)
             self.fig.colorbar(sp, ax=self.ptsne, label='cluster values')
 
         self.ptsne.set_title(self.title())

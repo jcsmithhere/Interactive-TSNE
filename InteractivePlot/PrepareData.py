@@ -274,6 +274,7 @@ class PrepareData_SSL_model(PrepareData):
             model technique used {SIMCLR, SIMSIAM or CLASSIFIER}
         image_path  : str
             The path to the images to display on the interactive t-SNE using the model to organize
+            Can be either a path to a directory, or individual files in a list
         num_clusters : int
             Number of clusters to color code for visualization purposes
             Uses a hierachical clustering method.
